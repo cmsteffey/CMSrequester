@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net5.0</TargetFramework>
+    <AssemblyName>CMSrequestingTool</AssemblyName>
+    <ApplicationIcon>requester16x16.ico</ApplicationIcon>
+    <Platforms>AnyCPU;x64</Platforms>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="CMSlib">
+      <HintPath>..\..\CMSlib\CMSlib\bin\Release\net5.0\CMSlib.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+</Project>
