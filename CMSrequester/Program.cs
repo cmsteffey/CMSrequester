@@ -16,6 +16,7 @@ namespace CMSrequester
             System.Net.Http.HttpClient client = new();
             System.Text.StringBuilder currentJson = new();
             Dictionary<string, Command> commands = new();
+            Exception exc = null;
 
             commands.Add("ADDHEADER", new("Adds a header to all outgoing requests.", async () => {
                 Console.Write("Header name: ");
@@ -263,7 +264,12 @@ namespace CMSrequester
                     Console.WriteLine("Successfully wrote to file");
                 }
             }));
-            
+
+            commands.Add("EXEPTION", new("Shows the most recent exception", async () =>
+            {
+                Console.WriteLine(exc?.ToString() ?? "No exception currently stored.");
+            }
+            ));
 
             commands.Add("CONFIG", new("Shows the current config's properties", async () =>
             {
@@ -290,7 +296,15 @@ namespace CMSrequester
                 Console.ForegroundColor = cfg.DefaultText;
                 if (commands.ContainsKey(input.ToUpper()))
                 {
-                    await commands[input.ToUpper()].Func.Invoke();
+                    try
+                    {
+                        await commands[input.ToUpper()].Func.Invoke();
+                    }
+                    catch(Exception e)
+                    {
+                        exc = e;
+                        Console.WriteLine("Exception encountered, use EXCEPTION command to view");
+                    }
                 }
                 else
                 {
