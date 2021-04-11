@@ -10,7 +10,7 @@
 
   <ItemGroup>
     <Reference Include="CMSlib">
-      <HintPath>..\..\CMSlib\CMSlib\bin\Release\net5.0\CMSlib.dll</HintPath>
+      <HintPath>..\CMSlib.dll</HintPath>
     </Reference>
   </ItemGroup>
 

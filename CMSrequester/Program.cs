@@ -16,7 +16,7 @@ namespace CMSrequester
             System.Net.Http.HttpClient client = new();
             System.Text.StringBuilder currentJson = new();
             Dictionary<string, Command> commands = new();
-            Exception exc = null;
+            List<ExceptionRecord> exceptionRecords = new();
 
             commands.Add("ADDHEADER", new("Adds a header to all outgoing requests.", async () => {
                 Console.Write("Header name: ");
@@ -75,10 +75,9 @@ namespace CMSrequester
                 Console.Write("Title: ");
                 Console.Title = Console.ReadLine();
             }));
-            commands.Add("CLEAR",new("Clears all text in this console window.",  static () =>
+            commands.Add("CLEAR", new("Clears all text in this console window.", static async () =>
             {
                 Console.Clear();
-                return System.Threading.Tasks.Task.CompletedTask;
             }));
             commands.Add("OPTIONS", new("Makes an OPTIONS request to the provided url", async () => {
                 Console.Write("URL: ");
@@ -87,7 +86,7 @@ namespace CMSrequester
                 Console.WriteLine("Running...");
                 await DisplayResponse(await client.SendAsync(new(System.Net.Http.HttpMethod.Options, url)), cfg);
             }));
-            
+
             commands.Add("POST", new("Makes a POST request to the provided url, using the json provided in SETJSON.", async () =>
             {
                 if (currentJson.Length != 0)
@@ -101,7 +100,7 @@ namespace CMSrequester
                             new System.Net.Http.StringContent(
                                 currentJson.ToString(), System.Text.Encoding.UTF8, "application/json"
                             )
-                        ),cfg
+                        ), cfg
                     );
                 }
                 else
@@ -109,15 +108,15 @@ namespace CMSrequester
                     Console.WriteLine("Run SETJSON first");
                 }
             }));
-            commands.Add("HEAD", new ("Makes a HEAD request to the provided url.", async () =>
+            commands.Add("HEAD", new("Makes a HEAD request to the provided url.", async () =>
             {
-                Console.Write("URL: ");
-                string url = Console.ReadLine();
-                if (url.ToUpper() == "CANCEL") return;
-                Console.WriteLine("Running...");
-                await DisplayResponse(await client.SendAsync(new(System.Net.Http.HttpMethod.Head, url)),cfg);
+               Console.Write("URL: ");
+               string url = Console.ReadLine();
+               if (url.ToUpper() == "CANCEL") return;
+               Console.WriteLine("Running...");
+               await DisplayResponse(await client.SendAsync(new(System.Net.Http.HttpMethod.Head, url)), cfg);
             }));
-            commands.Add("PUT", new ("Makes a PUT request to the provided url, using the json provided in SETJSON.", async () => {
+            commands.Add("PUT", new("Makes a PUT request to the provided url, using the json provided in SETJSON.", async () => {
                 if (currentJson.Length != 0)
                 {
                     Console.Write("URL: ");
@@ -129,7 +128,7 @@ namespace CMSrequester
                         new System.Net.Http.StringContent(
                             currentJson.ToString(), System.Text.Encoding.UTF8, "application/json"
                         )
-                    ),cfg);
+                    ), cfg);
                 }
                 else
                 {
@@ -148,7 +147,7 @@ namespace CMSrequester
                         new System.Net.Http.StringContent(
                             currentJson.ToString(), System.Text.Encoding.UTF8, "application/json"
                         )
-                    ),cfg);
+                    ), cfg);
                 }
                 else
                 {
@@ -156,7 +155,7 @@ namespace CMSrequester
                 }
             }));
             commands.Add("DELETE", new("Makes a DELETE request to the provided url.", async () => {
-                
+
                 Console.Write("URL: ");
                 string url = Console.ReadLine();
                 if (url.ToUpper() == "CANCEL") return;
@@ -164,15 +163,15 @@ namespace CMSrequester
                 await DisplayResponse(
                     await client.DeleteAsync(url), cfg
                 );
-                
+
             }));
-            commands.Add("GET", new ("Makes a GET request to the provided url.", async () =>
+            commands.Add("GET", new("Makes a GET request to the provided url.", async () =>
             {
-                Console.Write("URL: ");
-                string url = Console.ReadLine();
-                if (url.ToUpper() == "CANCEL") return;
-                Console.WriteLine("Running...");
-                await DisplayResponse(await client.GetAsync(url),cfg);
+               Console.Write("URL: ");
+               string url = Console.ReadLine();
+               if (url.ToUpper() == "CANCEL") return;
+               Console.WriteLine("Running...");
+               await DisplayResponse(await client.GetAsync(url), cfg);
             }));
             commands.Add("GETBYTES", new("Makes a GET request to the provided url, but gets a byte array. You can leave \"Output file title\" blank if you don't want an output file, or give the file a title to save the bytes to your disk.", async () =>
             {
@@ -190,11 +189,11 @@ namespace CMSrequester
                 System.Net.Http.HttpResponseMessage message = await client.SendAsync(new(System.Net.Http.HttpMethod.Head, url));
                 if (!message.IsSuccessStatusCode)
                 {
-                    await DisplayResponse(message,cfg);
+                    await DisplayResponse(message, cfg);
                     return;
                 }
                 byte[] bytes = await client.GetByteArrayAsync(url);
-                if(outputTitle.Trim() == "")
+                if (outputTitle.Trim() == "")
                     Console.WriteLine(bytes.ToReadableString());
                 else
                 {
@@ -220,7 +219,7 @@ namespace CMSrequester
                 System.Net.Http.HttpResponseMessage message = await client.SendAsync(new(System.Net.Http.HttpMethod.Head, url));
                 if (!message.IsSuccessStatusCode)
                 {
-                    await DisplayResponse(message,cfg);
+                    await DisplayResponse(message, cfg);
                     return;
                 }
                 string encoded = Convert.ToBase64String(await client.GetByteArrayAsync(url));
@@ -236,7 +235,7 @@ namespace CMSrequester
             }));
             commands.Add("DOWNLOADGETJSON", new("Makes a GET request to the provided url, but gets a string. You can leave \"Output file title\" blank if you don't want an output file, or give the file a title to save the txt to your disk.", async () =>
             {
-                    if (!Directory.Exists(cfg.StorageFolder))
+                if (!Directory.Exists(cfg.StorageFolder))
                 {
                     Console.WriteLine("Invalid path provided - please correct the StorageFolder in the config");
                     return;
@@ -250,32 +249,47 @@ namespace CMSrequester
                 System.Net.Http.HttpResponseMessage message = await client.SendAsync(new(System.Net.Http.HttpMethod.Head, url));
                 if (!message.IsSuccessStatusCode)
                 {
-                    await DisplayResponse(message,cfg);
+                    await DisplayResponse(message, cfg);
                     return;
                 }
-                
+
                 if (outputTitle.Trim() == "")
                     Console.WriteLine((await client.GetAsync(url)));
                 else
                 {
                     Console.WriteLine("Writing to file...");
                     using StreamWriter stream = File.CreateText($@"{cfg.StorageFolder}{Path.DirectorySeparatorChar}{outputTitle}.txt");
-                    (await client.GetAsync(url)).Content.CopyTo(stream.BaseStream,null,System.Threading.CancellationToken.None);
+                    (await client.GetAsync(url)).Content.CopyTo(stream.BaseStream, null, System.Threading.CancellationToken.None);
                     Console.WriteLine("Successfully wrote to file");
                 }
             }));
 
-            commands.Add("EXEPTION", new("Shows the most recent exception", async () =>
+            commands.Add("EXCEPTION", new("Shows the most recent exception", async () =>
             {
-                Console.WriteLine(exc?.ToString() ?? "No exception currently stored.");
-            }
-            ));
+                System.Text.StringBuilder output = new();
+                if(exceptionRecords.Count == 0)
+                {
+                    Console.WriteLine("No exceptions currently stored.");
+                    return;
+                }
+                output.Append("|Num  |Timestamp            |Command       |Exception Type           |\n");
+                for(int i = 0; i < exceptionRecords.Count; i++)
+                {
+                    output.Append((i+1).ToString().TableColumn(5, leftPipe: true, rightPipe: true))
+                    .Append(exceptionRecords[i].ThrownAt.ToString("dd-MM-yyyy - HH:mm:ss").TableColumn(21, rightPipe: true))
+                    .Append(exceptionRecords[i].CommandName.TableColumn(14, rightPipe: true))
+                    .Append(exceptionRecords[i].Exception.GetType().Name.TableColumn(25, rightPipe: true))
+                    .Append('\n');
+                }
+                Console.WriteLine(output);
+            }));
 
             commands.Add("CONFIG", new("Shows the current config's properties", async () =>
             {
                 cfg.DisplayInspect();
             }));
-            foreach(var prop in typeof(RequesterConfig).GetProperties())
+
+            foreach (var prop in typeof(RequesterConfig).GetProperties())
             {
                 commands.Add("CONFIG." + prop.Name.ToUpper(), new($"Sets the \"{prop.Name}\" property of the config", async () =>
                 {
@@ -286,6 +300,8 @@ namespace CMSrequester
                     cfg.SetProp(prop.Name, val);
                 }));
             }
+
+
             Console.ForegroundColor = cfg.DefaultText;
             while (true)
             {
@@ -300,10 +316,10 @@ namespace CMSrequester
                     {
                         await commands[input.ToUpper()].Func.Invoke();
                     }
-                    catch(Exception e)
+                    catch (Exception e)
                     {
-                        exc = e;
-                        Console.WriteLine("Exception encountered, use EXCEPTION command to view");
+                        exceptionRecords.Add(new(DateTime.Now, e, input.ToUpper()));
+                        Console.WriteLine("Exception encountered, use EXCEPTIONS command to view");
                     }
                 }
                 else
@@ -314,7 +330,7 @@ namespace CMSrequester
         }
         public static async System.Threading.Tasks.Task DisplayResponse(System.Net.Http.HttpResponseMessage message, RequesterConfig config)
         {
-            Console.WriteLine("Status code: " + message.StatusCode + " - " + (int)message.StatusCode);
+            Console.WriteLine("Status code: " + message.StatusCode + " - " + (int)message.StatusCode + ' ' + message.StatusCode.ToString().ToUpper());
             Console.WriteLine("Reason: " + message.ReasonPhrase);
             Console.WriteLine("Headers: ");
             foreach (KeyValuePair<string, IEnumerable<string>> pair in message.Headers)
@@ -341,13 +357,13 @@ namespace CMSrequester
                         break;
                     case '}': case ']':
                         tabs--;
-                        if(config.Indent)
+                        if (config.Indent)
                             Console.Write('\n' + new string(' ', tabs * 2));
                         Console.Write(c);
                         break;
                     case ',':
                         Console.Write(c);
-                        if(config.Indent)
+                        if (config.Indent)
                             Console.Write('\n' + new string(' ', tabs * 2));
                         break;
                     case '"':
@@ -366,31 +382,21 @@ namespace CMSrequester
         }
 
     }
-    public class Command
-    {
-        public string Description { get; private set; }
-        public Func<System.Threading.Tasks.Task> Func { get; private set; }
-        public Command(string desc, Func<System.Threading.Tasks.Task> func)
-        {
-            Func = func;
-            Description = desc;
-        }
-    }
 
     public class RequesterConfig
     {
         //all props should be bool, enum, or string.
-        public bool Indent { get; set; } = true;
-        public ConsoleColor QuoteColor { get; set; } = ConsoleColor.Green;
-        public ConsoleColor ConfigOptionsDisplayColor { get; set; } = ConsoleColor.Blue;
-        public ConsoleColor CommandColor { get; set; } = ConsoleColor.Red;
-        public ConsoleColor DefaultText { get; set; } = ConsoleColor.White;
+        public bool Indent { get; private set; } = true;
+        public ConsoleColor QuoteColor { get; private set; } = ConsoleColor.Green;
+        public ConsoleColor ConfigOptionsDisplayColor { get; private set; } = ConsoleColor.Blue;
+        public ConsoleColor CommandColor { get; private set; } = ConsoleColor.Red;
+        public ConsoleColor DefaultText { get; private set; } = ConsoleColor.White;
         private string _storageFolder = "./";
-        public string StorageFolder { get { return _storageFolder; } set {value = value.Replace('\\','/'); _storageFolder = value + (value[^1] == '/' ? '\0' : '/'); } }
+        public string StorageFolder { get { return _storageFolder; } set { value = value.Replace('\\', '/'); _storageFolder = value + (value[^1] == '/' ? '\0' : '/'); } }
         public void DisplayInspect()
         {
             var props = typeof(RequesterConfig).GetProperties();
-            foreach(var prop in props)
+            foreach (var prop in props)
             {
                 Console.Write(prop.Name + ": ");
                 ConsoleColor prev = Console.ForegroundColor;
@@ -405,11 +411,10 @@ namespace CMSrequester
             System.Reflection.PropertyInfo info = typeof(RequesterConfig).GetProperty(name);
             if (info is null)
                 Console.WriteLine($"The property {name} was not found.");
-            if(info?.CanWrite ?? false)
+            if (info?.CanWrite ?? false)
             {
                 if (info.PropertyType.IsEnum && Enum.TryParse(info.PropertyType, value, true, out object result))
                     info.GetSetMethod().Invoke(this, new object[] { result });
-
                 else
                     try {
                         info.GetSetMethod().Invoke(this, new object[]{
@@ -417,16 +422,19 @@ namespace CMSrequester
                           bool.Parse(value)
                         : info.PropertyType == typeof(int) ?
                           int.Parse(value)
-                        : 
+                        :
                           value
                         });
                     }
-                    catch (Exception){
+                    catch (Exception) {
                         Console.WriteLine("There was an error setting the value, due to an invalid value type being provided.");
                     }
-
-
             }
         }
-    }
+    } 
+    
+    public record Command(string Description, Func<System.Threading.Tasks.Task> Func);
+
+    public record ExceptionRecord(DateTime ThrownAt, Exception Exception, string CommandName);
+
 }
