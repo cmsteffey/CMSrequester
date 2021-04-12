@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using CMSlib.Extensions;
+using CMSlib.Tables;
 using System.Linq;
 using System.IO;
 namespace CMSrequester
@@ -17,7 +18,20 @@ namespace CMSrequester
             System.Text.StringBuilder currentJson = new();
             Dictionary<string, Command> commands = new();
             List<ExceptionRecord> exceptionRecords = new();
+            Table excs = new(
+                new TableSection(
+                    typeof(int),
+                        new TableColumn(null, 4, "Num", LeftPipe:true, RightPipe:true)
+                ),
+                new TableSection(
+                    typeof(ExceptionRecord),
+                        new TableColumn("ThrownAt", 21, "Timestamp", RightPipe:true, CustomFormatter:(object item)=> { return ((DateTime)item).ToString("yyyy-MM-dd - HH:mm:ss"); }),
+                        new TableColumn("CommandName", 20, "Command", RightPipe:true),
+                        new TableColumn("Exception", 25, null, RightPipe: true, CustomFormatter: (object item) => { return ((Exception)item).GetType().Name; })
+                )
+            );
 
+       
             commands.Add("ADDHEADER", new("Adds a header to all outgoing requests.", async () => {
                 Console.Write("Header name: ");
                 string headerName = Console.ReadLine();
@@ -264,26 +278,16 @@ namespace CMSrequester
                 }
             }));
 
-            commands.Add("EXCEPTION", new("Shows the most recent exception", async () =>
+            commands.Add("EXCEPTIONS", new("Shows the most recent exception", async () =>
             {
-                System.Text.StringBuilder output = new();
                 if(exceptionRecords.Count == 0)
                 {
                     Console.WriteLine("No exceptions currently stored.");
                     return;
                 }
-                output.Append("|Num  |Timestamp            |Command       |Exception Type           |\n");
-                for(int i = 0; i < exceptionRecords.Count; i++)
-                {
-                    output.Append((i+1).ToString().TableColumn(5, leftPipe: true, rightPipe: true))
-                    .Append(exceptionRecords[i].ThrownAt.ToString("dd-MM-yyyy - HH:mm:ss").TableColumn(21, rightPipe: true))
-                    .Append(exceptionRecords[i].CommandName.TableColumn(14, rightPipe: true))
-                    .Append(exceptionRecords[i].Exception.GetType().Name.TableColumn(25, rightPipe: true))
-                    .Append('\n');
-                }
-                Console.WriteLine(output);
+                Console.WriteLine(excs);
             }));
-
+            
             commands.Add("CONFIG", new("Shows the current config's properties", async () =>
             {
                 cfg.DisplayInspect();
@@ -318,8 +322,16 @@ namespace CMSrequester
                     }
                     catch (Exception e)
                     {
-                        exceptionRecords.Add(new(DateTime.Now, e, input.ToUpper()));
-                        Console.WriteLine("Exception encountered, use EXCEPTIONS command to view");
+                        try
+                        {
+                            ExceptionRecord record = new(DateTime.Now, e, input.ToUpper());
+                            exceptionRecords.Add(record);
+                            excs.AddRow(exceptionRecords.Count, record);
+                            Console.WriteLine("Exception encountered, use EXCEPTIONS command to view");
+                        }catch(Exception ee)
+                        {
+                            Console.WriteLine(ee);
+                        }
                     }
                 }
                 else
@@ -435,6 +447,12 @@ namespace CMSrequester
     
     public record Command(string Description, Func<System.Threading.Tasks.Task> Func);
 
-    public record ExceptionRecord(DateTime ThrownAt, Exception Exception, string CommandName);
+    public record ExceptionRecord(DateTime ThrownAt, Exception Exception, string CommandName)
+    {
+        public override string ToString()
+        {
+            return ThrownAt.ToString("dd-MM-yyyy - HH:mm:ss");
+        }
+    }
 
 }
