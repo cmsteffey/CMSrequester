@@ -4,6 +4,7 @@ using CMSlib.Extensions;
 using CMSlib.Tables;
 using System.Linq;
 using System.IO;
+using System.Net.Http;
 namespace CMSrequester
 {
     class Program
@@ -30,8 +31,16 @@ namespace CMSrequester
                         new TableColumn("Exception", 25, null, RightPipe: true, CustomFormatter: (object item) => { return ((Exception)item).GetType().Name; })
                 )
             );
+            Table responses = new(
+                new TableSection(
+                    typeof(RequestRecord),
+                    new TableColumn("Sent", 21, RightPipe:true, LeftPipe:true, CustomFormatter:(item)=>((DateTime)item).ToString("yyyy-MM-dd - HH:ss")),
+                    new TableColumn("HttpResponse", 2, "", Ellipse: false, CustomFormatter: (item) => { Console.ForegroundColor = ConsoleColor.White; Console.BackgroundColor = (((int)((HttpResponseMessage)item).StatusCode) / 100) switch { 1 => ConsoleColor.Blue, 2 => ConsoleColor.Green, 3 => ConsoleColor.Yellow, 4 => ConsoleColor.Red, 5 => ConsoleColor.Red, _ => ConsoleColor.DarkMagenta }; return ((int)((HttpResponseMessage)item).StatusCode).ToString(); }),
+                    new TableColumn("RequestUrl", 30,  LeftPipe: true, RightPipe: true, ColumnTitle: "Request endpoint", CustomFormatter: (item) => { Console.ForegroundColor = cfg.DefaultText; Console.BackgroundColor = ConsoleColor.Black; return (string)item; })
+                )
+            );
 
-       
+            
             commands.Add("ADDHEADER", new("Adds a header to all outgoing requests.", async () => {
                 Console.Write("Header name: ");
                 string headerName = Console.ReadLine();
@@ -447,12 +456,9 @@ namespace CMSrequester
     
     public record Command(string Description, Func<System.Threading.Tasks.Task> Func);
 
-    public record ExceptionRecord(DateTime ThrownAt, Exception Exception, string CommandName)
-    {
-        public override string ToString()
-        {
-            return ThrownAt.ToString("dd-MM-yyyy - HH:mm:ss");
-        }
-    }
+    public record ExceptionRecord(DateTime ThrownAt, Exception Exception, string CommandName);
+
+    public record RequestRecord(DateTime Sent, string RequestUrl, System.Net.Http.HttpResponseMessage HttpResponse);
+
 
 }
