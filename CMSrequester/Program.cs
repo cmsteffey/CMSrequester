@@ -35,8 +35,9 @@ namespace CMSrequester
                 new TableSection(
                     typeof(RequestRecord),
                     new TableColumn("Sent", 21, RightPipe:true, LeftPipe:true, CustomFormatter:(item)=>((DateTime)item).ToString("yyyy-MM-dd - HH:ss")),
-                    new TableColumn("HttpResponse", 2, "", Ellipse: false, CustomFormatter: (item) => { Console.ForegroundColor = ConsoleColor.White; Console.BackgroundColor = (((int)((HttpResponseMessage)item).StatusCode) / 100) switch { 1 => ConsoleColor.Blue, 2 => ConsoleColor.Green, 3 => ConsoleColor.Yellow, 4 => ConsoleColor.Red, 5 => ConsoleColor.Red, _ => ConsoleColor.DarkMagenta }; return ((int)((HttpResponseMessage)item).StatusCode).ToString(); }),
-                    new TableColumn("RequestUrl", 30,  LeftPipe: true, RightPipe: true, ColumnTitle: "Request endpoint", CustomFormatter: (item) => { Console.ForegroundColor = cfg.DefaultText; Console.BackgroundColor = ConsoleColor.Black; return (string)item; })
+                    new TableColumn("HttpResponse", 3, "", Ellipse: false, CustomFormatter: (item) => { Console.ForegroundColor = ConsoleColor.White; Console.BackgroundColor = (((int)((HttpResponseMessage)item).StatusCode) / 100) switch { 1 => ConsoleColor.Blue, 2 => ConsoleColor.Green, 3 => ConsoleColor.Yellow, 4 => ConsoleColor.Red, 5 => ConsoleColor.Red, _ => ConsoleColor.DarkMagenta }; return ((int)((HttpResponseMessage)item).StatusCode).ToString(); }),
+                    new TableColumn("Verb", 8, LeftPipe:true, RightPipe:true),
+                    new TableColumn("RequestUrl", 30, RightPipe: true, ColumnTitle: "Request endpoint", CustomFormatter: (item) => { Console.ForegroundColor = cfg.DefaultText; Console.BackgroundColor = ConsoleColor.Black; return (string)item; })
                 )
             );
 
@@ -117,14 +118,16 @@ namespace CMSrequester
                     Console.Write("URL: ");
                     string url = Console.ReadLine();
                     if (url.ToUpper() == "CANCEL") return;
+                    DateTime sent = DateTime.Now;
                     Console.WriteLine("Running...");
-                    await DisplayResponse(
+                    HttpResponseMessage message =
                         await client.PostAsync(url,
                             new System.Net.Http.StringContent(
                                 currentJson.ToString(), System.Text.Encoding.UTF8, "application/json"
                             )
-                        ), cfg
-                    );
+                        );
+                    await DisplayResponse(message, cfg);
+                    responses.AddRow(new RequestRecord(sent, url, message, "POST"));
                 }
                 else
                 {
@@ -133,11 +136,14 @@ namespace CMSrequester
             }));
             commands.Add("HEAD", new("Makes a HEAD request to the provided url.", async () =>
             {
-               Console.Write("URL: ");
-               string url = Console.ReadLine();
-               if (url.ToUpper() == "CANCEL") return;
-               Console.WriteLine("Running...");
-               await DisplayResponse(await client.SendAsync(new(System.Net.Http.HttpMethod.Head, url)), cfg);
+                Console.Write("URL: ");
+                string url = Console.ReadLine();
+                if (url.ToUpper() == "CANCEL") return;
+                DateTime sent = DateTime.Now;
+                Console.WriteLine("Running...");
+                HttpResponseMessage message = await client.SendAsync(new(System.Net.Http.HttpMethod.Head, url));
+                await DisplayResponse(message, cfg);
+                responses.AddRow(new RequestRecord(sent, url, message, "HEAD"));
             }));
             commands.Add("PUT", new("Makes a PUT request to the provided url, using the json provided in SETJSON.", async () => {
                 if (currentJson.Length != 0)
@@ -145,13 +151,17 @@ namespace CMSrequester
                     Console.Write("URL: ");
                     string url = Console.ReadLine();
                     if (url.ToUpper() == "CANCEL") return;
+                    DateTime sent = DateTime.Now;
                     Console.WriteLine("Running...");
-                    await DisplayResponse(
-                    await client.PutAsync(url,
+                    
+                    HttpResponseMessage message = await client.PutAsync(url,
                         new System.Net.Http.StringContent(
                             currentJson.ToString(), System.Text.Encoding.UTF8, "application/json"
                         )
-                    ), cfg);
+                    );
+                    await DisplayResponse(message, cfg);
+                    responses.AddRow(new RequestRecord(sent, url, message, "PUT"));
+
                 }
                 else
                 {
@@ -164,13 +174,11 @@ namespace CMSrequester
                     Console.Write("URL: ");
                     string url = Console.ReadLine();
                     if (url.ToUpper() == "CANCEL") return;
+                    DateTime sent = DateTime.Now;
                     Console.WriteLine("Running...");
-                    await DisplayResponse(
-                    await client.PatchAsync(url,
-                        new System.Net.Http.StringContent(
-                            currentJson.ToString(), System.Text.Encoding.UTF8, "application/json"
-                        )
-                    ), cfg);
+                    HttpResponseMessage message = await client.PatchAsync(url, new System.Net.Http.StringContent(currentJson.ToString(), System.Text.Encoding.UTF8, "application/json"));
+                    await DisplayResponse(message, cfg);
+                    responses.AddRow(new RequestRecord(sent, url, message, "PATCH"));
                 }
                 else
                 {
@@ -182,19 +190,23 @@ namespace CMSrequester
                 Console.Write("URL: ");
                 string url = Console.ReadLine();
                 if (url.ToUpper() == "CANCEL") return;
+                DateTime sent = DateTime.Now;
                 Console.WriteLine("Running...");
-                await DisplayResponse(
-                    await client.DeleteAsync(url), cfg
-                );
+                HttpResponseMessage message = await client.DeleteAsync(url);
+                await DisplayResponse(message, cfg);
+                responses.AddRow(new RequestRecord(sent, url, message, "DELETE"));
 
             }));
             commands.Add("GET", new("Makes a GET request to the provided url.", async () =>
             {
-               Console.Write("URL: ");
-               string url = Console.ReadLine();
-               if (url.ToUpper() == "CANCEL") return;
-               Console.WriteLine("Running...");
-               await DisplayResponse(await client.GetAsync(url), cfg);
+                Console.Write("URL: ");
+                string url = Console.ReadLine();
+                if (url.ToUpper() == "CANCEL") return;
+                DateTime sent = DateTime.Now;
+                Console.WriteLine("Running...");
+                HttpResponseMessage message = await client.GetAsync(url);
+                await DisplayResponse(message, cfg);
+                responses.AddRow(new RequestRecord(sent, url, message, "GET"));
             }));
             commands.Add("GETBYTES", new("Makes a GET request to the provided url, but gets a byte array. You can leave \"Output file title\" blank if you don't want an output file, or give the file a title to save the bytes to your disk.", async () =>
             {
@@ -209,7 +221,10 @@ namespace CMSrequester
                 string url = Console.ReadLine();
                 if (url.ToUpper() == "CANCEL") return;
                 Console.WriteLine("Running...");
+                DateTime sent = DateTime.Now;
                 System.Net.Http.HttpResponseMessage message = await client.SendAsync(new(System.Net.Http.HttpMethod.Head, url));
+                responses.AddRow(new RequestRecord(sent, url, message, "GET"));
+
                 if (!message.IsSuccessStatusCode)
                 {
                     await DisplayResponse(message, cfg);
@@ -224,7 +239,9 @@ namespace CMSrequester
                     using FileStream stream = File.Create($@"{cfg.StorageFolder}{(outputTitle.StartsWith("NOEXT") ? outputTitle[5..] : outputTitle + url[url.LastIndexOf('.')..])}");
                     await stream.WriteAsync(bytes);
                     Console.WriteLine("Successfully wrote to file");
+
                 }
+                
             }));
             commands.Add("GETBASE64", new("Makes a GET request to the provided url, but gets a base64 encoded string. You can leave \"Output file title\" blank if you don't want an output file, or give the file a title to save the txt to your disk.", async () =>
             {
@@ -238,8 +255,10 @@ namespace CMSrequester
                 Console.Write("URL: ");
                 string url = Console.ReadLine();
                 if (url.ToUpper() == "CANCEL") return;
+                DateTime sent = DateTime.Now;
                 Console.WriteLine("Running...");
                 System.Net.Http.HttpResponseMessage message = await client.SendAsync(new(System.Net.Http.HttpMethod.Head, url));
+                responses.AddRow(new RequestRecord(sent, url, message, "GET"));
                 if (!message.IsSuccessStatusCode)
                 {
                     await DisplayResponse(message, cfg);
@@ -269,13 +288,14 @@ namespace CMSrequester
                 string url = Console.ReadLine();
                 if (url.ToUpper() == "CANCEL") return;
                 Console.WriteLine("Running...");
+                DateTime sent = DateTime.Now;
                 System.Net.Http.HttpResponseMessage message = await client.SendAsync(new(System.Net.Http.HttpMethod.Head, url));
+                responses.AddRow(new RequestRecord(sent, url, message, "GET"));
                 if (!message.IsSuccessStatusCode)
                 {
                     await DisplayResponse(message, cfg);
                     return;
                 }
-
                 if (outputTitle.Trim() == "")
                     Console.WriteLine((await client.GetAsync(url)));
                 else
@@ -301,6 +321,8 @@ namespace CMSrequester
             {
                 cfg.DisplayInspect();
             }));
+
+            commands.Add("LOG", new("Displays the log of outgoing requests", async () => { Console.WriteLine(responses.ToString()); }));
 
             foreach (var prop in typeof(RequesterConfig).GetProperties())
             {
@@ -351,6 +373,7 @@ namespace CMSrequester
         }
         public static async System.Threading.Tasks.Task DisplayResponse(System.Net.Http.HttpResponseMessage message, RequesterConfig config)
         {
+            
             Console.WriteLine("Status code: " + message.StatusCode + " - " + (int)message.StatusCode + ' ' + message.StatusCode.ToString().ToUpper());
             Console.WriteLine("Reason: " + message.ReasonPhrase);
             Console.WriteLine("Headers: ");
@@ -458,7 +481,7 @@ namespace CMSrequester
 
     public record ExceptionRecord(DateTime ThrownAt, Exception Exception, string CommandName);
 
-    public record RequestRecord(DateTime Sent, string RequestUrl, System.Net.Http.HttpResponseMessage HttpResponse);
+    public record RequestRecord(DateTime Sent, string RequestUrl, System.Net.Http.HttpResponseMessage HttpResponse, string Verb);
 
 
 }
