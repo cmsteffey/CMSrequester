@@ -103,13 +103,6 @@ namespace CMSrequester
             {
                 Console.Clear();
             }));
-            commands.Add("OPTIONS", new("Makes an OPTIONS request to the provided url", async () => {
-                Console.Write("URL: ");
-                string url = Console.ReadLine();
-                if (url.ToUpper() == "CANCEL") return;
-                Console.WriteLine("Running...");
-                await DisplayResponse(await client.SendAsync(new(System.Net.Http.HttpMethod.Options, url)), cfg);
-            }));
 
             commands.Add("POST", new("Makes a POST request to the provided url, using the json provided in SETJSON.", async () =>
             {
@@ -197,6 +190,17 @@ namespace CMSrequester
                 responses.AddRow(new RequestRecord(sent, url, message, "DELETE"));
 
             }));
+            commands.Add("OPTIONS", new("Makes an OPTIONS request to the provided url", async () => {
+                Console.Write("URL: ");
+                string url = Console.ReadLine();
+                if (url.ToUpper() == "CANCEL") return;
+                DateTime sent = DateTime.Now;
+                Console.WriteLine("Running...");
+                HttpResponseMessage message = await client.SendAsync(new(System.Net.Http.HttpMethod.Options, url));
+                await DisplayResponse(message, cfg);
+                responses.AddRow(new RequestRecord(sent, url, message, "OPTIONS"));
+            }));
+
             commands.Add("GET", new("Makes a GET request to the provided url.", async () =>
             {
                 Console.Write("URL: ");
@@ -208,6 +212,7 @@ namespace CMSrequester
                 await DisplayResponse(message, cfg);
                 responses.AddRow(new RequestRecord(sent, url, message, "GET"));
             }));
+
             commands.Add("GETBYTES", new("Makes a GET request to the provided url, but gets a byte array. You can leave \"Output file title\" blank if you don't want an output file, or give the file a title to save the bytes to your disk.", async () =>
             {
                 if (!Directory.Exists(cfg.StorageFolder))
