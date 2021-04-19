@@ -15,7 +15,7 @@ namespace CMSrequester
             Console.ForegroundColor = ConsoleColor.Cyan;
             Console.WriteLine("Thank you for using CMSrequester! Please use the command \"allcommands\" to see all available commands.");
             RequesterConfig cfg = new();
-            System.Net.Http.HttpClient client = new();
+            HttpClient client = new();
             System.Text.StringBuilder currentJson = new();
             Dictionary<string, Command> commands = new();
             List<ExceptionRecord> exceptionRecords = new();
@@ -34,10 +34,10 @@ namespace CMSrequester
             Table responses = new(
                 new TableSection(
                     typeof(RequestRecord),
-                    new TableColumn("Sent", 21, RightPipe:true, LeftPipe:true, CustomFormatter:(item)=>((DateTime)item).ToString("yyyy-MM-dd - HH:ss")),
+                    new TableColumn("Sent", 21, RightPipe:true, LeftPipe:true, CustomFormatter:(item)=>((DateTime)item).ToString("yyyy-MM-dd - HH:mm:ss")),
                     new TableColumn("HttpResponse", 3, "", Ellipse: false, CustomFormatter: (item) => { Console.ForegroundColor = ConsoleColor.White; Console.BackgroundColor = (((int)((HttpResponseMessage)item).StatusCode) / 100) switch { 1 => ConsoleColor.Blue, 2 => ConsoleColor.Green, 3 => ConsoleColor.Yellow, 4 => ConsoleColor.Red, 5 => ConsoleColor.Red, _ => ConsoleColor.DarkMagenta }; return ((int)((HttpResponseMessage)item).StatusCode).ToString(); }),
                     new TableColumn("Verb", 8, LeftPipe:true, RightPipe:true),
-                    new TableColumn("RequestUrl", 30, RightPipe: true, ColumnTitle: "Request endpoint", CustomFormatter: (item) => { Console.ForegroundColor = cfg.DefaultText; Console.BackgroundColor = ConsoleColor.Black; return (string)item; })
+                    new TableColumn("RequestUrl", 100, RightPipe: true, ColumnTitle: "Request endpoint", CustomFormatter: (item) => { Console.ForegroundColor = cfg.DefaultText; Console.BackgroundColor = ConsoleColor.Black; return (string)item; })
                 )
             );
 
@@ -354,7 +354,7 @@ namespace CMSrequester
                 {
                     try
                     {
-                        await commands[input.ToUpper()].Func.Invoke();
+                        await commands[input.ToUpper().Trim()].Func.Invoke();
                     }
                     catch (Exception e)
                     {
@@ -434,12 +434,12 @@ namespace CMSrequester
 
     public class RequesterConfig
     {
-        //all props should be bool, enum, or string.
-        public bool Indent { get; private set; } = true;
-        public ConsoleColor QuoteColor { get; private set; } = ConsoleColor.Green;
-        public ConsoleColor ConfigOptionsDisplayColor { get; private set; } = ConsoleColor.Blue;
-        public ConsoleColor CommandColor { get; private set; } = ConsoleColor.Red;
-        public ConsoleColor DefaultText { get; private set; } = ConsoleColor.White;
+        //all props should be bool, enum, int, or string.
+        public bool Indent { get; set; } = true;
+        public ConsoleColor QuoteColor { get; set; } = ConsoleColor.Green;
+        public ConsoleColor ConfigOptionsDisplayColor { get; set; } = ConsoleColor.Blue;
+        public ConsoleColor CommandColor { get; set; } = ConsoleColor.Red;
+        public ConsoleColor DefaultText { get; set; } = ConsoleColor.White;
         private string _storageFolder = "./";
         public string StorageFolder { get { return _storageFolder; } set { value = value.Replace('\\', '/'); _storageFolder = value + (value[^1] == '/' ? '\0' : '/'); } }
         public void DisplayInspect()
@@ -463,7 +463,9 @@ namespace CMSrequester
             if (info?.CanWrite ?? false)
             {
                 if (info.PropertyType.IsEnum && Enum.TryParse(info.PropertyType, value, true, out object result))
+                {
                     info.GetSetMethod().Invoke(this, new object[] { result });
+                }
                 else
                     try {
                         info.GetSetMethod().Invoke(this, new object[]{
