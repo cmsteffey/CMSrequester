@@ -47,19 +47,35 @@ namespace CMSrequester
                 string headerName = Console.ReadLine();
                 Console.Write("Header value(s): ");
                 List<string> values = new();
+                const string encoder64Head = "%%BASE64{";
+                
                 string value = Console.ReadLine();
                 do
                 {
                     values.Add(value);
                     value = Console.ReadLine();
                 } while (value != "");
+                for(int i = 0; i < values.Count; i++)
+                {
+                    string currValue = values[i];
+                    while(values[i].IndexOf(encoder64Head) != -1)
+                    {
+                        string @new = currValue.Substring(0, currValue.IndexOf(encoder64Head));
+                        int endBracket = currValue.IndexOf('}', currValue.IndexOf(encoder64Head));
+                        string toEncode = currValue.Substring(currValue.IndexOf(encoder64Head) + encoder64Head.Length, endBracket - (currValue.IndexOf(encoder64Head) + encoder64Head.Length));
+                        @new += Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(toEncode));
+                        if(endBracket != currValue.Length - 1) 
+                            @new += currValue.Substring(endBracket + 1);
+                        values[i] = @new;
+                    }
+                }
                 if (values.Count == 1) {
-                    client.DefaultRequestHeaders.Add(headerName, values[0]);
+                    client.DefaultRequestHeaders.TryAddWithoutValidation(headerName, values[0]);
                     Console.WriteLine($"Added header \"{headerName}\": \"{values[0]}\"");
                 }
                 else
                 {
-                    client.DefaultRequestHeaders.Add(headerName, values);
+                    client.DefaultRequestHeaders.TryAddWithoutValidation(headerName, values);
                     Console.WriteLine($"Added header \"{headerName}\": {values.ToArray().ToReadableString()}");
                 }
             }));
@@ -104,6 +120,29 @@ namespace CMSrequester
                 Console.Clear();
             }));
 
+            commands.Add("POSTURLENC", new("Makes a POST request to the provided url, using the json provided in SETJSON.", async () =>
+            {
+                Dictionary<string, string> urlEncParams = new();
+                while (true) {
+                    Console.Write("Key: ");
+                    string key = Console.ReadLine();
+                    if (key == "") break;
+                    Console.Write("Value: ");
+                    urlEncParams.Add(key, Console.ReadLine());
+                }
+                Console.Write("URL: ");
+                string url = Console.ReadLine();
+                if (url.ToUpper() == "CANCEL") return;
+                DateTime sent = DateTime.Now;
+                Console.WriteLine("Running...");
+                HttpResponseMessage message =
+                    await client.PostAsync(url,
+                        new FormUrlEncodedContent(urlEncParams)
+                    );
+                await DisplayResponse(message, cfg);
+                responses.AddRow(new RequestRecord(sent, url, message, "POST"));
+                
+            }));
             commands.Add("POST", new("Makes a POST request to the provided url, using the json provided in SETJSON.", async () =>
             {
                 if (currentJson.Length != 0)
