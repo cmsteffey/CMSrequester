@@ -5,6 +5,7 @@ using CMSlib.Tables;
 using System.Linq;
 using System.IO;
 using System.Net.Http;
+using System.Text.RegularExpressions;
 namespace CMSrequester
 {
     class Program
@@ -94,9 +95,10 @@ namespace CMSrequester
                 string input = Console.ReadLine();
                 do
                 {
+                    Regex.
                     currentJson.Append(input.Trim());
                     input = Console.ReadLine();
-
+                    
                 } while (input != "");
                 Console.WriteLine("Successfully set json");
             }));
@@ -120,7 +122,7 @@ namespace CMSrequester
                 Console.Clear();
             }));
 
-            commands.Add("POSTURLENC", new("Makes a POST request to the provided url, using the json provided in SETJSON.", async () =>
+            commands.Add("POSTURLENC", new("Makes a POST request to the provided url, using the key-value-pairs specified..", async () =>
             {
                 Dictionary<string, string> urlEncParams = new();
                 while (true) {
@@ -319,6 +321,7 @@ namespace CMSrequester
                     Console.WriteLine("Successfully wrote to file");
                 }
             }));
+
             commands.Add("DOWNLOADGETJSON", new("Makes a GET request to the provided url, but gets a string. You can leave \"Output file title\" blank if you don't want an output file, or give the file a title to save the txt to your disk.", async () =>
             {
                 if (!Directory.Exists(cfg.StorageFolder))
